@@ -4,16 +4,20 @@ using FluentAssertions;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Testing;
 
-namespace Customers.Api.Tests.Integration;
+namespace Customers.Api.Tests.Integration.CustomerController;
 
-public class CustomerControllerTests : IClassFixture<WebApplicationFactory<IApiMarker>>
+// [Collection("CustomerApi Collection")]
+public class GetCustomerControllerTests : IClassFixture<WebApplicationFactory<IApiMarker>>
 {
     private readonly HttpClient _httpClient;
 
-    public CustomerControllerTests(WebApplicationFactory<IApiMarker> webApplicationFactory)
+    private readonly List<Guid> _createdIds = [];
+
+    public GetCustomerControllerTests(WebApplicationFactory<IApiMarker> webApplicationFactory)
     {
         _httpClient = webApplicationFactory.CreateClient();
     }
+
 
     [Fact]
     public async Task Get_ReturnsNotFound_WhenCustomerDoesNotExist()
