@@ -13,6 +13,7 @@ namespace Customers.Api.Tests.Integration;
 public class CustomerApiFactory : WebApplicationFactory<IApiMarker>, IAsyncLifetime
 {
     public const string ValidGitHubUsername = "validuser";
+    public const string ThrottledUser = "throttle";
 
     private readonly PostgreSqlContainer _dbContainer =
         new PostgreSqlBuilder()
@@ -49,6 +50,7 @@ public class CustomerApiFactory : WebApplicationFactory<IApiMarker>, IAsyncLifet
     {
         _gitHubApiServer.Start();
         _gitHubApiServer.SetupUser(ValidGitHubUsername);
+        _gitHubApiServer.SetupThrottledUser(ThrottledUser);
         await _dbContainer.StartAsync();
     }
 
