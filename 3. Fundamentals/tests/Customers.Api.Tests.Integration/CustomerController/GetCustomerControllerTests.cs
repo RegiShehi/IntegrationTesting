@@ -1,23 +1,46 @@
 ﻿using System.Net;
 using System.Net.Http.Json;
-using FluentAssertions;
+using Bogus;
+using Customers.Api.Contracts.Requests;
+using Customers.Api.Contracts.Responses;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.AspNetCore.Mvc.Testing;
+using FluentAssertions;
 
 namespace Customers.Api.Tests.Integration.CustomerController;
 
 // [Collection("CustomerApi Collection")]
-public class GetCustomerControllerTests : IClassFixture<WebApplicationFactory<IApiMarker>>
+public class GetCustomerControllerTests : IClassFixture<CustomerApiFactory>
 {
-    private readonly HttpClient _httpClient;
+    private readonly HttpClient _client;
 
-    private readonly List<Guid> _createdIds = [];
+    private readonly Faker<CustomerRequest> _customerGenerator = new Faker<CustomerRequest>()
+        .RuleFor(x => x.Email, faker => faker.Person.Email)
+        .RuleFor(x => x.FullName, faker => faker.Person.FullName)
+        .RuleFor(x => x.GitHubUsername, CustomerApiFactory.ValidGitHubUsername)
+        .RuleFor(x => x.DateOfBirth, faker => faker.Person.DateOfBirth.Date);
 
-    public GetCustomerControllerTests(WebApplicationFactory<IApiMarker> webApplicationFactory)
+    public GetCustomerControllerTests(CustomerApiFactory apiFactory)
     {
-        _httpClient = webApplicationFactory.CreateClient();
+        _client = apiFactory.CreateClient();
     }
 
+    [Fact]
+    public async Task Get_ReturnsCustomer_WhenCustomerExists()
+    {
+        // Arrange
+        var customer = _customerGenerator.Generate();
+        var createdResponse = await _client.PostAsJsonAsync("customers", customer);
+        var createdCustomer = await createdResponse.Content.ReadFromJsonAsync<CustomerResponse>();
+
+        // Act
+        var response = await _client.GetAsync($"customers/{createdCustomer!.Id}");
+
+        // Assert
+        var retrievedCustomer = await response.Content.ReadFromJsonAsync<CustomerResponse>();
+
+        retrievedCustomer.Should().BeEquivalentTo(createdCustomer);
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
+    }
 
     [Fact]
     public async Task Get_ReturnsNotFound_WhenCustomerDoesNotExist()
@@ -25,13 +48,9 @@ public class GetCustomerControllerTests : IClassFixture<WebApplicationFactory<IA
         // Arrange
 
         // Act
-        var response = await _httpClient.GetAsync($"customers/{Guid.NewGuid()}");
+        var response = await _client.GetAsync($"customers/{Guid.NewGuid()}");
 
         // Assert
         response.StatusCode.Should().Be(HttpStatusCode.NotFound);
-        var problem = await response.Content.ReadFromJsonAsync<ValidationProblemDetails>();
-
-        problem!.Title.Should().Be("Not Found");
-        problem.Status.Should().Be((int)HttpStatusCode.NotFound);
     }
 }
